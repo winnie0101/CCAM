@@ -1,0 +1,5 @@
+
+/data
+*.pth
+/WSOL/log
+/WSSS/log
