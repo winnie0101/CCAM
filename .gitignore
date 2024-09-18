@@ -1,6 +1,6 @@
 
-/data
+data/
 *.pth
-/WSOL/log
-/WSOL/debug
-/WSSS/log
+WSOL/log/
+WSOL/debug/
+WSSS/log/
