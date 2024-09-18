@@ -69,8 +69,8 @@ def main():
 
     # create model
     print("=> creating model...")
-    model = get_model(pretrained=config.PRETRAINED).cuda()
     param_groups = model.get_parameter_groups()
+    model = get_model(pretrained=config.PRETRAINED).cuda()
     # model_info(model)
 
     criterion = [SimMaxLoss(metric='cos', alpha=args.alpha).cuda(), SimMinLoss(metric='cos').cuda(),

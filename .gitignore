@@ -2,4 +2,5 @@
 /data
 *.pth
 /WSOL/log
+/WSOL/debug
 /WSSS/log

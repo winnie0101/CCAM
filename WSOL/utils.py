@@ -160,7 +160,7 @@ def visualize_heatmap(config, experiments, images, attmaps, cls_name, image_name
 
         # create folder
         if not os.path.exists('debug/images/{}/{}/colormaps/{}'.format(experiments, phase, cls_name[i])):
-            os.mkdir('debug/images/{}/{}/colormaps/{}'.format(experiments, phase, cls_name[i]))
+            os.makedirs('debug/images/{}/{}/colormaps/{}'.format(experiments, phase, cls_name[i]))
 
         attmap = attmaps[i]
         attmap = attmap / np.max(attmap)
@@ -218,6 +218,10 @@ def save_bbox_as_json(config, experiments, cnt, rank, bboxes, cls_name, image_na
             key = key.replace('//', '/')
             pred_bbox[key] = temp_save_box
 
+    # create folder
+    if not os.path.exists('debug/images/{}/{}/pseudo_boxes'.format(experiments, phase)):
+        os.mkdir('debug/images/{}/{}/pseudo_boxes'.format(experiments, phase))
+        
     with open(os.path.join(f'debug/images/{experiments}/{phase}/pseudo_boxes/{cnt}_{rank}_bbox.json'), 'w') as fp:
         json.dump(pred_bbox, fp)
 
