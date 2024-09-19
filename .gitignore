@@ -3,4 +3,5 @@ data/
 *.pth
 WSOL/log/
 WSOL/debug/
+WSOL/dataset/ilsvrc.py
 WSSS/log/

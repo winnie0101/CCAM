@@ -3,6 +3,7 @@ ref. from https://github.com/zxhuang1698/interpretability-by-parts
 ref. from https://github.com/Sierkinhane/ORNet
 modified by sierkinhane
 """
+import os
 import argparse
 import time
 import torch.backends.cudnn as cudnn
@@ -19,6 +20,7 @@ import torch.multiprocessing as mp
 
 # benchmark before running
 cudnn.benchmark = True
+os.environ['NCCL_P2P_DISABLE'] = '1'
 
 
 def parse_arg():
@@ -41,8 +43,8 @@ def parse_arg():
     args = parser.parse_args()
 
     with open(args.cfg, 'r') as f:
-        # config = yaml.load(f, Loader=yaml.FullLoader)
-        config = yaml.load(f)
+        config = yaml.load(f, Loader=yaml.FullLoader)
+        # config = yaml.load(f)
         config = edict(config)
     config.EXPERIMENT = args.experiment
     config.EVALUTATE = args.evaluate
@@ -86,7 +88,7 @@ def main():
 flag = True
 def main_worker(local_rank, nprocs, config, args):
     global flag
-    dist.init_process_group(backend='nccl', init_method=f'tcp://127.0.0.1:{config.PORT}', world_size=nprocs,
+    dist.init_process_group(backend='gloo', init_method=f'tcp://127.0.0.1:{config.PORT}', world_size=nprocs,
                             rank=local_rank)
 
     # create model
