@@ -1,4 +1,4 @@
-ROOT: '/data1/xjheng/dataset/ILSVRC2012/'
+ROOT: '../data/ILSVRC2012_imageNet1k/'
 DATA: 'ILSVRC2012'
 FDIM: 2048+1024
 INPUT_SIZE: 256
