@@ -68,7 +68,7 @@ parser = argparse.ArgumentParser()
 ###############################################################################
 parser.add_argument('--seed', default=0, type=int)
 parser.add_argument('--num_workers', default=8, type=int)
-parser.add_argument('--data_dir', default='/data1/xjheng/dataset/VOC2012/', type=str)
+parser.add_argument('--data_dir', default='../data/VOC2012/', type=str)
 
 ###############################################################################
 # Network
@@ -146,6 +146,7 @@ if __name__ == '__main__':
 
     # load_model(model, model_path, parallel=the_number_of_gpu > 1)
     ckpt = torch.load(model_path)
+    print("keys:", ckpt.keys())
     flag = ckpt['flag']
     if the_number_of_gpu > 1:
         model.module.load_state_dict(ckpt['state_dict'])

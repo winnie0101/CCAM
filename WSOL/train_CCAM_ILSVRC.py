@@ -3,7 +3,6 @@ ref. from https://github.com/zxhuang1698/interpretability-by-parts
 ref. from https://github.com/Sierkinhane/ORNet
 modified by sierkinhane
 """
-import os
 import argparse
 import time
 import torch.backends.cudnn as cudnn
@@ -20,7 +19,6 @@ import torch.multiprocessing as mp
 
 # benchmark before running
 cudnn.benchmark = True
-os.environ['NCCL_P2P_DISABLE'] = '1'
 
 
 def parse_arg():
@@ -88,7 +86,7 @@ def main():
 flag = True
 def main_worker(local_rank, nprocs, config, args):
     global flag
-    dist.init_process_group(backend='gloo', init_method=f'tcp://127.0.0.1:{config.PORT}', world_size=nprocs,
+    dist.init_process_group(backend='nccl', init_method=f'tcp://127.0.0.1:{config.PORT}', world_size=nprocs,
                             rank=local_rank)
 
     # create model
@@ -140,7 +138,7 @@ def main_worker(local_rank, nprocs, config, args):
     # wrap to dataloader
     train_loader = torch.utils.data.DataLoader(
         train_data, batch_size=config.BATCH_SIZE,
-        num_workers=config.WORKERS, pin_memory=False, sampler=train_sampler)
+        num_workers=config.WORKERS, pin_memory=True, sampler=train_sampler)
     test_loader = torch.utils.data.DataLoader(
         test_data, batch_size=config.BATCH_SIZE,
         num_workers=config.WORKERS, pin_memory=True, collate_fn=my_collate, sampler=test_sampler)
@@ -183,17 +181,20 @@ def main_worker(local_rank, nprocs, config, args):
         # training
         train(config, train_loader, model, criterion, optimizer, epoch, scheduler,
               local_rank, nprocs)
-        best_CorLoc, best_threshold = test(config, test_loader, model, criterion, epoch, local_rank, nprocs)
-        threshold = best_threshold
-
-        if local_rank == 0:
-            torch.save(
-                {"state_dict": model.module.state_dict(),
-                 "epoch": epoch + 1,
-                 "CorLoc": best_CorLoc,
-                 "Threshold": best_threshold,
-                 "Flag": flag,
-                 }, '{}/checkpoints/{}/current_epoch_{}.pth'.format(config.DEBUG, config.EXPERIMENT, epoch + 1))
+        torch.cuda.empty_cache()
+        
+        if epoch == config.EPOCHS - 1:
+            best_CorLoc, best_threshold = test(config, test_loader, model, criterion, epoch, local_rank, nprocs)
+            threshold = best_threshold
+    
+            if local_rank == 0:
+                torch.save(
+                    {"state_dict": model.module.state_dict(),
+                     "epoch": epoch + 1,
+                     "CorLoc": best_CorLoc,
+                     "Threshold": best_threshold,
+                     "Flag": flag,
+                     }, '{}/checkpoints/{}/current_epoch_{}.pth'.format(config.DEBUG, config.EXPERIMENT, epoch + 1))
 
     print('Training finished...')
     # evaluate on test set
@@ -251,6 +252,7 @@ def train(config, train_loader, model, criterion, optimizer, epoch, scheduler, l
     # switch to train mode
     model.train()
     # record time
+    torch.cuda.synchronize() 
     end = time.time()
 
     # training step
@@ -272,7 +274,11 @@ def train(config, train_loader, model, criterion, optimizer, epoch, scheduler, l
         optimizer.step()
         scheduler.step()
 
-        torch.distributed.barrier()
+        torch.cuda.synchronize() 
+
+        # torch.distributed.barrier()
+        if i == len(train_loader) - 1:
+            torch.distributed.barrier()
 
         reduced_loss = reduce_mean(loss, nprocs)
         reduced_loss_bg_bg = reduce_mean(loss1, nprocs)
@@ -304,7 +310,7 @@ def train(config, train_loader, model, criterion, optimizer, epoch, scheduler, l
                 epoch, i, len(train_loader), batch_time=batch_time,
                 loss=losses, loss_bgbg=losses_bg_bg, loss_bgfg=losses_bg_fg, loss_fg_fg=losses_fg_fg), flush=True)
             # image debug
-            visualize_heatmap(config, config.EXPERIMENT, input.clone().detach(), ccam, cls_name, img_name)
+            # visualize_heatmap(config, config.EXPERIMENT, input.clone().detach(), ccam, cls_name, img_name)
 
     if local_rank == 0:
         # print the learning rate
